@@ -1,0 +1,11 @@
+plugins {
+    id 'java'
+    id 'maven'
+}
+
+group 'com.github.bgorven'
+version '0.0.1'
+
+wrapper {
+  gradleVersion = '3.0-rc-1'
+}
