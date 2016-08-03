@@ -20,8 +20,7 @@ package org.bven.jni;
 import java.util.Locale;
 
 /**
- * Helper class for naming the jni library with platform/arch name for which it
- * is binary compatible.
+ * Helper class mapping platform/arch system data to canonical values
  */
 public class ArchName {
 

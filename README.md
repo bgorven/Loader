@@ -1,6 +1,12 @@
+[![](https://jitpack.io/v/bgorven/Loader.svg)](https://jitpack.io/#bgorven/Loader)
+
 A utility for loading distributed platform native libraries, extracted from [sigar](https://github.com/hyperic/sigar/tree/master/bindings/java/hyperic_jni/src/org/hyperic/jni)
 
 Makes a best-effort attempt to detect the OS and Architecture your code is being run on, and extract and load the appropriate binary, if found in your classpath.
+
+Adding it to your build:
+
+Details at JitPack https://jitpack.io/#bgorven/Loader
 
 Usage:
 

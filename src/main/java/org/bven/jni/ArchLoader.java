@@ -21,18 +21,49 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.*;
 
+/**
+ * A utility for loading distributed platform native libraries
+ */
 public class ArchLoader implements AutoCloseable {
 
     private final String name;
     private final String libLocation;
     private final ClassLoader classLoader;
     private Path tmpFile;
-    
+
+     /**
+     * Extracts the appropriate library file from the classpath, and returns it
+     * to be loaded, e.g: <code>
+     * static {
+     *   ArchLoader.load(Native.class);
+     * }
+     * </code>
+     * 
+     * @param clazz
+     *            the library name and location will be derived from this
+     *            class's name and package.
+     */
     public static void load(Class<?> clazz) {
         try (ArchLoader loader = new ArchLoader(clazz)) {
             System.load(loader.getLibFile());
         }
     }
+
+    /**
+     * Extracts the appropriate library file from the classpath, and returns it
+     * to be loaded. <code>
+     * static {
+     *   ArchLoader.load("MyLibrary", "libs", MyLibrary.class.getClassLoader());
+     * }
+     * </code>
+     * 
+     * @param name
+     *            the base name of the library.
+     * @param libLocation
+     *            the root location within the classpath to search for libraries
+     * @param classLoader
+     *            the classloader to load the library with
+     */
     public static void load(String name, String libLocation, ClassLoader classLoader) {
         try (ArchLoader loader = new ArchLoader(name, libLocation, classLoader)) {
             System.load(loader.getLibFile());
@@ -41,41 +72,38 @@ public class ArchLoader implements AutoCloseable {
 
     /**
      * Extracts the appropriate library file from the classpath, and returns it
-     * to be loaded, e.g: <code><pre>
+     * to be loaded, e.g: <code>
      * static {
      *   try (ArchLoader loader = new ArchLoader(Native.class)) {
      *     System.load(loader.getLibFile());
      *   }
      * }
-     * </pre></code>
+     * </code>
      * 
-     * @param loaderClass
+     * @param clazz
      *            the library name and location will be derived from this
      *            class.
-     * @throws NullPointerException
-     *             if {@link Class#getPackage()} returns null.
      */
-    public ArchLoader(Class<?> loaderClass) {
-        this(loaderClass.getSimpleName(), "lib/" + loaderClass.getPackage().getName(), loaderClass.getClassLoader());
+    public ArchLoader(Class<?> clazz) {
+        this(clazz.getSimpleName(), "lib/" + clazz.getPackage().getName(), clazz.getClassLoader());
     }
 
     /**
      * Extracts the appropriate library file from the classpath, and returns it
-     * to be loaded. <code><pre>
+     * to be loaded. <code>
      * static {
-     *   try (ArchLoader loader = new ArchLoader(Native.class, "1.0.0")) {
+     *   try (ArchLoader loader = new ArchLoader("MyLibrary", "libs", MyLibrary.class.getClassLoader())) {
      *     System.load(loader.getLibFile());
      *   }
      * }
-     * </pre></code>
+     * </code>
      * 
-     * @param loaderClass
-     *            the default classpath location will be derived from this
-     *            class.
-     * @param version
-     *            optional version to append
-     * @throws NullPointerException
-     *             if {@link Class#getPackage()} returns null.
+     * @param name
+     *            the base name of the library.
+     * @param libLocation
+     *            the root location within the classpath to search for libraries
+     * @param classLoader
+     *            the classloader to load the library with
      */
     public ArchLoader(String name, String libLocation, ClassLoader classLoader) {
         this.name = System.mapLibraryName(name);
@@ -83,39 +111,9 @@ public class ArchLoader implements AutoCloseable {
         this.classLoader = classLoader;
     }
 
-    /**
-     * The default lib name will be derived from the last segment of the class'
-     * package name, plus the version, if one was supplied, separated by a
-     * hyphen.
-     * 
-     * @return the base library name, as mapped by
-     *         {@link System#mapLibraryName(String)}
-     */
-    public String getName() {
-        return name;
-    }
-
-    /**
-     * Returns a location for native libraries that can be configured on a
-     * per-package basis, or a default location for the current architecture.
-     * 
-     * @return the value of the system property "${packageName}.nativelibs", or
-     *         {@link ArchName#getName()} if unset.
-     */
-    public String getLibLocation() {
-        return libLocation;
-    }
-
-    /**
-     * Lib path will be a file with name {@link #getName()} within directory
-     * {@link ArchLoader#getLibLocation()}
-     * 
-     * @return a relative path to the lib file; this will typically be resolved
-     *         against classpath root.
-     */
-    public String getLibPath() {
-        String libLoc = trimSeparators(getLibLocation());
-        String libName = trimSeparators(getName());
+    private String getLibPath() {
+        String libLoc = trimSeparators(libLocation);
+        String libName = trimSeparators(name);
         return libLoc + "/" + ArchName.getName() + "/" + libName;
     }
 
