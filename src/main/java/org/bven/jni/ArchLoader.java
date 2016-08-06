@@ -17,9 +17,9 @@
 package org.bven.jni;
 
 import java.io.*;
-import java.net.URI;
-import java.net.URISyntaxException;
+import java.net.*;
 import java.nio.file.*;
+import java.lang.reflect.*;
 
 /**
  * A utility for loading distributed platform native libraries
@@ -28,8 +28,30 @@ public class ArchLoader implements AutoCloseable {
 
     private final String name;
     private final String libLocation;
-    private final ClassLoader classLoader;
+    private final Class<?> linkedClass;
     private Path tmpFile;
+    private static final Method LOAD = getLoadMethod();
+    
+    private static Method getLoadMethod() {
+        try {
+            Method method = Runtime.class.getDeclaredMethod("load0", Class.class, String.class);
+            method.setAccessible(true);
+            return method;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+    
+    private static void load(Class<?> clazz, String lib) {
+        try {
+            LOAD.invoke(Runtime.getRuntime(), clazz, lib);
+        } catch (InvocationTargetException e) {
+            throw new RuntimeException("Loading failed", e.getTargetException());
+        } catch (Exception e) {
+            // If this happens, try invoking System.load for yourself, as per the constructor javadoc.
+            throw new RuntimeException("Unable to reflectively invoke the correct loader method", e);
+        }
+    }
 
      /**
      * Extracts the appropriate library file from the classpath, and returns it
@@ -45,7 +67,7 @@ public class ArchLoader implements AutoCloseable {
      */
     public static void load(Class<?> clazz) {
         try (ArchLoader loader = new ArchLoader(clazz)) {
-            System.load(loader.getLibFile());
+            load(clazz, loader.getLibFile());
         }
     }
 
@@ -53,7 +75,7 @@ public class ArchLoader implements AutoCloseable {
      * Extracts the appropriate library file from the classpath, and returns it
      * to be loaded. <code>
      * static {
-     *   ArchLoader.load("MyLibrary", "libs", MyLibrary.class.getClassLoader());
+     *   ArchLoader.load("myLibrary", "libs", MyLibrary.class);
      * }
      * </code>
      * 
@@ -61,12 +83,12 @@ public class ArchLoader implements AutoCloseable {
      *            the base name of the library.
      * @param libLocation
      *            the root location within the classpath to search for libraries
-     * @param classLoader
-     *            the classloader to load the library with
+     * @param linkedClass
+     *            the class that the library will link with
      */
-    public static void load(String name, String libLocation, ClassLoader classLoader) {
-        try (ArchLoader loader = new ArchLoader(name, libLocation, classLoader)) {
-            System.load(loader.getLibFile());
+    public static void load(String name, String libLocation, Class<?> linkedClass) {
+        try (ArchLoader loader = new ArchLoader(name, libLocation, linkedClass)) {
+            load(linkedClass, loader.getLibFile());
         }
     }
 
@@ -85,14 +107,14 @@ public class ArchLoader implements AutoCloseable {
      *            class.
      */
     public ArchLoader(Class<?> clazz) {
-        this(clazz.getSimpleName(), "lib/" + clazz.getPackage().getName(), clazz.getClassLoader());
+        this(clazz.getSimpleName(), "lib/" + clazz.getPackage().getName(), clazz);
     }
 
     /**
      * Extracts the appropriate library file from the classpath, and returns it
      * to be loaded. <code>
      * static {
-     *   try (ArchLoader loader = new ArchLoader("MyLibrary", "libs", MyLibrary.class.getClassLoader())) {
+     *   try (ArchLoader loader = new ArchLoader("myLibrary", "libs", MyLibrary.class)) {
      *     System.load(loader.getLibFile());
      *   }
      * }
@@ -102,13 +124,14 @@ public class ArchLoader implements AutoCloseable {
      *            the base name of the library.
      * @param libLocation
      *            the root location within the classpath to search for libraries
-     * @param classLoader
-     *            the classloader to load the library with
+     * @param linkedClass
+     *            the class that the library will link with
      */
-    public ArchLoader(String name, String libLocation, ClassLoader classLoader) {
+    public ArchLoader(String name, String libLocation, Class<?> linkedClass) {
+        name = name.substring(0,1).toLowerCase() + name.substring(1, name.length());
         this.name = System.mapLibraryName(name);
         this.libLocation = libLocation;
-        this.classLoader = classLoader;
+        this.linkedClass = linkedClass;
     }
 
     private String getLibPath() {
@@ -145,14 +168,14 @@ public class ArchLoader implements AutoCloseable {
         }
         final String libPath = getLibPath();
         try {
-            URI uri = classLoader.getResource(libPath).toURI();
+            URI uri = linkedClass.getClassLoader().getResource(libPath).toURI();
             if ("file".equals(uri.getScheme())) {
                 return new File(uri).getAbsolutePath();
             }
         } catch (NullPointerException | URISyntaxException e) {
             /* Continue on with the next option */ }
 
-        try (InputStream resourceAsStream = classLoader.getResourceAsStream(libPath)) {
+        try (InputStream resourceAsStream = linkedClass.getClassLoader().getResourceAsStream(libPath)) {
             if (resourceAsStream == null) {
                 throw new ArchNotSupportedException(libPath + " not found in classpath.");
             }
