@@ -35,15 +35,15 @@ src/main/resources/
 └── lib
     └── com.example.hello
         ├── freebsd-10-x64
-        │   └── libNative.so
+        │   └── libnative.so
         ├── linux-x64
-        │   └── libNative.so
+        │   └── libnative.so
         ├── linux-x86
-        │   └── libNative.so
+        │   └── libnative.so
         ├── osx-x64
-        │   └── libNative.dylib
+        │   └── libnative.dylib
         ├── osx-x86
-        │   └── libNative.dylib
+        │   └── libnative.dylib
         ├── windows-arm
         │   └── native.dll
         ├── windows-x64
