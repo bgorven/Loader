@@ -19,7 +19,7 @@ import org.bven.jni.*;
 
 public class Native {
     static {
-        //Same effect as ArchLoader.load("Native", "lib" + File.separator + "com.example.hello", Native.class.getClassLoader());
+        //Same effect as ArchLoader.load("native", "lib" + File.separator + "com.example.hello", Native.class);
         ArchLoader.load(Native.class);
 	}
 
@@ -40,10 +40,14 @@ src/main/resources/
         │   └── libNative.so
         ├── linux-x86
         │   └── libNative.so
+        ├── osx-x64
+        │   └── libNative.dylib
+        ├── osx-x86
+        │   └── libNative.dylib
         ├── windows-arm
-        │   └── Native.dll
+        │   └── native.dll
         ├── windows-x64
-        │   └── Native.dll
+        │   └── native.dll
         └── windows-x86
-            └── Native.dll
+            └── native.dll
 ```
